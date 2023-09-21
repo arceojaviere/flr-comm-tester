@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="https://getbootstrap.com/docs/5.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+        <style>
+            .payload-box{
+                display: inline-block;
+                width: 50cm;
+                max-height: 15cm;
+            }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" ></script>
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js" ></script>
+        <script>
+            
+            $(document).ready(function(){
+                startSSE();
+
+                $("#sendBase64Command").click(function(){
+                    sendBase64Command($("#base64TextBox").val());
+                });
+
+
+                $("#clearReplyAreas").click(function(){
+                    $("#hexBox").html("");
+                    $("#textBox").html("");
+                });
+
+            });
+
+
+            function startSSE(){
+                if(typeof(EventSource) !== "undefined") {
+                    var source = new EventSource("/commtest");
+                    source.onmessage = renderEvent;
+                } else {
+                    $("#events").html("SSE not supported");
+                }
+            }
+
+            function sendBase64Command(command){
+                
+                console.log("sending: " + command);
+                $.ajax({
+                    url: "/commtest",
+                    type: "POST",
+                    data: command,
+                    contentType: "text/plain",
+                    success: function(data,status){
+                        console.log("Completed. Status: " + status); 
+                        }
+                });
+            }
+            
+
+            function renderEvent(event){
+                data = JSON.parse(event.data);
+                console.log(data);
+
+                if(!data.heartbeat){
+                        var decodedPayload = atob(data.payload);
+
+                        $("#hexBox").html($("#hexBox").html() + byteToHexString(stringToByteArray(decodedPayload))); 
+                        $("#textBox").html($("#textBox").html() + decodedPayload); 
+                }
+            }
+
+            function stringToByteArray(string){
+                var byteArray = new Uint8Array(string.length);
+                for(var pointer = 0; pointer < string.length; pointer ++){
+                    byteArray[pointer] = string.charCodeAt(pointer);
+                }
+                return byteArray;
+            }
+
+            function byteToHexString(byteArray){
+
+                return Array.from(byteArray, (byte) => { return (byte & 0xFF).toString(16).padStart(2,"0");}).join("");
+            }
+
+            
+        </script>
+    </head>
+    <body>
+
+    <h1>Comm tester</h1>
+    <div id="list-container" class="list-group">
+        <ul id="events">
+            <li class="list-group-item list-group-item-info"><h3> Command </h3>
+                <div class="card"><div class="card-title">Base64:</div><span class="card-body overflow-auto payload-box">
+                    <textarea id="base64TextBox" ></textarea>
+                    <button id="sendBase64Command">Send</button>
+                    <button id="clearReplyAreas">Clear</button>
+                </span></div><br />
+            </li>
+            <li class="list-group-item list-group-item-primary"><h3> Reply </h3>
+                <div class="card"><div class="card-title">Hex:</div><span class="card-body overflow-auto payload-box" id="hexBox"></span></div><br />
+                <div class="card"><div class="card-title">Text:</div><span class="card-body overflow-auto payload-box" id="textBox"></span></div>
+            </li>
+        </ul>
+    </div>
+
+    
+
+</body>
+</html>
+
+
