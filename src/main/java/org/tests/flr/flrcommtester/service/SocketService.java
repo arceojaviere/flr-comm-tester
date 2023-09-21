@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
+import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -54,5 +55,17 @@ public class SocketService {
             throw new IOException("Error while getting the socket's output stream: ", t);
         }
         return os;
+    }
+
+    @PreDestroy
+    void clean(){
+        try{
+            if(!(this.socket == null && this.socket.isClosed())){
+                LOGGER.info("Cleaning socket...");
+                this.socket.close();
+            }
+        }catch(Throwable t){
+            throw new RuntimeException("Error while cleaning socket: ", t);
+        }
     }
 }
